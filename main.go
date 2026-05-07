@@ -52,43 +52,81 @@ func main() {
 		log.Fatal(err)
 	}
 
+	position := PlayerPosition{width / 2, height / 2}
+
+	downRunCount := 0
 	upRunCount := 0
+	leftRunCount := 0
+	rightRunCount := 0
+
 	for {
 		event := termbox.PollEvent()
-		startingPosition := PlayerPosition{width / 2, height / 2}
 
-		if event.Type == termbox.EventKey && event.Ch == 'w' || event.Key == termbox.KeyArrowUp {
+		if event.Type == termbox.EventKey && (event.Ch == 'w' || event.Key == termbox.KeyArrowUp) {
 			upRunCount++
-			moveUp(startingPosition.posX, startingPosition.posY, upRunCount)
-		} else if event.Type == termbox.EventKey && event.Ch == 's' || event.Key == termbox.KeyArrowDown {
-			moveDown()
-		} else if event.Type == termbox.EventKey && event.Ch == 'a' || event.Key == termbox.KeyArrowLeft {
-			moveLeft()
-		} else if event.Type == termbox.EventKey && event.Ch == 'd' || event.Key == termbox.KeyArrowRight {
-			moveRight()
+			upRunCount, position = moveUp(position.posX, position.posY, upRunCount)
+		} else if event.Type == termbox.EventKey && (event.Ch == 's' || event.Key == termbox.KeyArrowDown) {
+			downRunCount++
+			downRunCount, position = moveDown(position.posX, position.posY, downRunCount)
+		} else if event.Type == termbox.EventKey && (event.Ch == 'a' || event.Key == termbox.KeyArrowLeft) {
+			leftRunCount++
+			leftRunCount, position = moveLeft(position.posX, position.posY, leftRunCount)
+		} else if event.Type == termbox.EventKey && (event.Ch == 'd' || event.Key == termbox.KeyArrowRight) {
+			rightRunCount++
+			rightRunCount, position = moveRight(position.posX, position.posY, rightRunCount)
 		} else if event.Type == termbox.EventKey && event.Ch == 'q' {
 			return
 		}
 	}
 }
 
-func moveUp(posX int, posY int, runIndex int) int {
-	termbox.SetCell(posX, posY-runIndex, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-	termbox.SetCell(posX, posY-runIndex+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+func moveUp(posX int, posY int, runIndex int) (int, PlayerPosition) {
+	termbox.SetCell(posX, posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+	position := PlayerPosition{posX, posY - 1}
+
+	termbox.SetCell(posX, posY+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
-	return runIndex
+	return runIndex, position
 }
 
-func moveDown() {
-	// TODO
+func moveDown(posX int, posY int, runIndex int) (int, PlayerPosition) {
+	termbox.SetCell(posX, posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+	position := PlayerPosition{posX, posY + 1}
+
+	termbox.SetCell(posX, posY-1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+
+	if err := termbox.Flush(); err != nil {
+		log.Fatal(err)
+	}
+	return runIndex, position
 }
 
-func moveLeft() {
-	// TODO
-}
+func moveLeft(posX int, posY int, runIndex int) (int, PlayerPosition) {
+	termbox.SetCell(posX-1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+	position := PlayerPosition{posX - 1, posY}
 
-func moveRight() {
-	// TODO
+	termbox.SetCell(posX+1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+
+	if err := termbox.Flush(); err != nil {
+		log.Fatal(err)
+	}
+	return runIndex, position
+}
+func moveRight(posX int, posY int, runIndex int) (int, PlayerPosition) {
+	termbox.SetCell(posX+1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+	position := PlayerPosition{posX + 1, posY}
+
+	termbox.SetCell(posX-1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+
+	if err := termbox.Flush(); err != nil {
+		log.Fatal(err)
+	}
+	return runIndex, position
 }
