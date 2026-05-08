@@ -58,73 +58,50 @@ func main() {
 	upRunCount := 0
 	leftRunCount := 0
 	rightRunCount := 0
-
 	for {
 		event := termbox.PollEvent()
 
 		if event.Type == termbox.EventKey && (event.Ch == 'w' || event.Key == termbox.KeyArrowUp) {
 			upRunCount++
-			upRunCount, position = moveUp(position.posX, position.posY, upRunCount)
+			upRunCount, position = movePlayer(position.posX, position.posY, upRunCount, "up")
 		} else if event.Type == termbox.EventKey && (event.Ch == 's' || event.Key == termbox.KeyArrowDown) {
 			downRunCount++
-			downRunCount, position = moveDown(position.posX, position.posY, downRunCount)
+			downRunCount, position = movePlayer(position.posX, position.posY, downRunCount, "down")
 		} else if event.Type == termbox.EventKey && (event.Ch == 'a' || event.Key == termbox.KeyArrowLeft) {
 			leftRunCount++
-			leftRunCount, position = moveLeft(position.posX, position.posY, leftRunCount)
+			leftRunCount, position = movePlayer(position.posX, position.posY, leftRunCount, "left")
 		} else if event.Type == termbox.EventKey && (event.Ch == 'd' || event.Key == termbox.KeyArrowRight) {
 			rightRunCount++
-			rightRunCount, position = moveRight(position.posX, position.posY, rightRunCount)
+			rightRunCount, position = movePlayer(position.posX, position.posY, rightRunCount, "right")
 		} else if event.Type == termbox.EventKey && event.Ch == 'q' {
 			return
 		}
 	}
 }
 
-func moveUp(posX int, posY int, runIndex int) (int, PlayerPosition) {
-	termbox.SetCell(posX, posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-	position := PlayerPosition{posX, posY - 1}
+func movePlayer(posX int, posY int, runIndex int, direction string) (int, PlayerPosition) {
+	position := PlayerPosition{}
 
-	termbox.SetCell(posX, posY+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
-	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-
-	if err := termbox.Flush(); err != nil {
-		log.Fatal(err)
+	switch direction {
+	case "up":
+		termbox.SetCell(posX, posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{posX, posY - 1}
+		termbox.SetCell(posX, posY+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	case "down":
+		termbox.SetCell(posX, posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{posX, posY + 1}
+		termbox.SetCell(posX, posY-1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	case "left":
+		termbox.SetCell(posX-1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{posX - 1, posY}
+		termbox.SetCell(posX+1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	case "right":
+		termbox.SetCell(posX+1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{posX + 1, posY}
+		termbox.SetCell(posX-1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
 	}
-	return runIndex, position
-}
 
-func moveDown(posX int, posY int, runIndex int) (int, PlayerPosition) {
-	termbox.SetCell(posX, posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-	position := PlayerPosition{posX, posY + 1}
-
-	termbox.SetCell(posX, posY-1, ' ', termbox.ColorBlack, termbox.ColorDefault)
 	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-
-	if err := termbox.Flush(); err != nil {
-		log.Fatal(err)
-	}
-	return runIndex, position
-}
-
-func moveLeft(posX int, posY int, runIndex int) (int, PlayerPosition) {
-	termbox.SetCell(posX-1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-	position := PlayerPosition{posX - 1, posY}
-
-	termbox.SetCell(posX+1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-
-	if err := termbox.Flush(); err != nil {
-		log.Fatal(err)
-	}
-	return runIndex, position
-}
-func moveRight(posX int, posY int, runIndex int) (int, PlayerPosition) {
-	termbox.SetCell(posX+1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-	position := PlayerPosition{posX + 1, posY}
-
-	termbox.SetCell(posX-1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
-
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
