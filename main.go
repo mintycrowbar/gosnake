@@ -17,35 +17,8 @@ func main() {
 	}
 	defer termbox.Close()
 
-	fg := termbox.ColorBlack
-	bg := termbox.ColorDefault
-
 	width, height := termbox.Size()
-
-	if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
-		log.Fatal(err)
-	}
-
-	// draw the left border
-	for i := 0; i < height; i++ {
-		termbox.SetCell(0, i, '#', fg, bg)
-	}
-
-	// draw the right border
-	for i := 0; i < height; i++ {
-		termbox.SetCell(width-1, i, '#', fg, bg)
-	}
-
-	// draw the top border
-	for i := 0; i < width; i++ {
-		termbox.SetCell(i, 0, '#', fg, bg)
-	}
-
-	// draw the bottom border
-	for i := 0; i < width; i++ {
-		termbox.SetCell(i, height-1, '#', fg, bg)
-	}
-
+	drawBorders()
 	termbox.SetCell(width/2, height/2, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
 
 	if err := termbox.Flush(); err != nil {
@@ -53,7 +26,6 @@ func main() {
 	}
 
 	position := PlayerPosition{width / 2, height / 2}
-
 	downRunCount := 0
 	upRunCount := 0
 	leftRunCount := 0
@@ -106,4 +78,35 @@ func movePlayer(posX int, posY int, runIndex int, direction string) (int, Player
 		log.Fatal(err)
 	}
 	return runIndex, position
+}
+
+func drawBorders() {
+	fg := termbox.ColorBlack
+	bg := termbox.ColorDefault
+
+	width, height := termbox.Size()
+
+	if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
+		log.Fatal(err)
+	}
+
+	// draw the left border
+	for i := 0; i < height; i++ {
+		termbox.SetCell(0, i, '#', fg, bg)
+	}
+
+	// draw the right border
+	for i := 0; i < height; i++ {
+		termbox.SetCell(width-1, i, '#', fg, bg)
+	}
+
+	// draw the top border
+	for i := 0; i < width; i++ {
+		termbox.SetCell(i, 0, '#', fg, bg)
+	}
+
+	// draw the bottom border
+	for i := 0; i < width; i++ {
+		termbox.SetCell(i, height-1, '#', fg, bg)
+	}
 }
