@@ -11,6 +11,55 @@ type PlayerPosition struct {
 	posY int
 }
 
+type Logger struct {
+	ch chan string
+}
+
+func NewLogger(path string) (Logger, error) {
+	file, err := os.OpenFile(
+		path,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0644,
+	)
+
+	if err != nil {
+		return Logger{}, err
+	}
+
+	logger := Logger{
+		ch: make(chan string, 128),
+	}
+
+	go func() {
+		defer func(file *os.File) {
+			fileCloseError := file.Close()
+			if fileCloseError != nil {
+				log.Fatalf("error while closing file: %v", fileCloseError)
+			}
+		}(file)
+
+		for msg := range logger.ch {
+			timestamp := time.Now().Format("15:04:05")
+			line := fmt.Sprintf("[%s]: %s\n", timestamp, msg)
+			_, writeError := file.WriteString(line)
+			if writeError != nil {
+				log.Fatalf("Failed to write to file: %v", writeError)
+			}
+		}
+	}()
+
+	return logger, nil
+}
+
+func (l Logger) Info(msg string) {
+	select {
+	case l.ch <- msg:
+		// message queued successfully
+	default:
+		// drop message because channel is full
+	}
+}
+
 func main() {
 	if err := termbox.Init(); err != nil {
 		log.Fatal(err)
