@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/nsf/termbox-go"
 )
@@ -9,6 +12,13 @@ import (
 type PlayerPosition struct {
 	posX int
 	posY int
+}
+
+type moveParams struct {
+	posX              int
+	posY              int
+	direction         string
+	previousDirection string
 }
 
 type Logger struct {
@@ -75,58 +85,95 @@ func main() {
 	}
 
 	position := PlayerPosition{width / 2, height / 2}
-	downRunCount := 0
-	upRunCount := 0
-	leftRunCount := 0
-	rightRunCount := 0
-	for {
-		event := termbox.PollEvent()
 
-		if event.Type == termbox.EventKey && (event.Ch == 'w' || event.Key == termbox.KeyArrowUp) {
-			upRunCount++
-			upRunCount, position = movePlayer(position.posX, position.posY, upRunCount, "up")
-		} else if event.Type == termbox.EventKey && (event.Ch == 's' || event.Key == termbox.KeyArrowDown) {
-			downRunCount++
-			downRunCount, position = movePlayer(position.posX, position.posY, downRunCount, "down")
-		} else if event.Type == termbox.EventKey && (event.Ch == 'a' || event.Key == termbox.KeyArrowLeft) {
-			leftRunCount++
-			leftRunCount, position = movePlayer(position.posX, position.posY, leftRunCount, "left")
-		} else if event.Type == termbox.EventKey && (event.Ch == 'd' || event.Key == termbox.KeyArrowRight) {
-			rightRunCount++
-			rightRunCount, position = movePlayer(position.posX, position.posY, rightRunCount, "right")
-		} else if event.Type == termbox.EventKey && event.Ch == 'q' {
-			return
+	events := make(chan termbox.Event, 20)
+	go func() {
+		for {
+			event := termbox.PollEvent()
+			events <- event
+		}
+	}()
+
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
+	direction := "right"
+	for {
+		select {
+		case event := <-events:
+			if event.Type == termbox.EventKey {
+				switch {
+				case event.Ch == 'w' || event.Key == termbox.KeyArrowUp:
+					previousDirection := direction
+					direction = "up"
+
+					if direction != previousDirection {
+						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+						ticker.Reset(250 * time.Millisecond)
+					}
+				case event.Ch == 's' || event.Key == termbox.KeyArrowDown:
+					previousDirection := direction
+					direction = "down"
+					if direction != previousDirection {
+						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+						ticker.Reset(250 * time.Millisecond)
+					}
+				case event.Ch == 'a' || event.Key == termbox.KeyArrowLeft:
+					previousDirection := direction
+					direction = "left"
+					if direction != previousDirection {
+						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+						ticker.Reset(250 * time.Millisecond)
+					}
+				case event.Ch == 'd' || event.Key == termbox.KeyArrowRight:
+					previousDirection := direction
+					direction = "right"
+					if direction != previousDirection {
+						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+						ticker.Reset(250 * time.Millisecond)
+					}
+				case event.Ch == 'q':
+					return
+				}
+			}
+		case <-ticker.C:
+			switch direction {
+			case "up":
+				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
+			case "down":
+				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
+			case "left":
+				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
+			case "right":
+				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
+			}
 		}
 	}
 }
 
-func movePlayer(posX int, posY int, runIndex int, direction string) (int, PlayerPosition) {
+func movePlayer(params moveParams) PlayerPosition {
 	position := PlayerPosition{}
 
-	switch direction {
+	switch params.direction {
 	case "up":
-		termbox.SetCell(posX, posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-		position = PlayerPosition{posX, posY - 1}
-		termbox.SetCell(posX, posY+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		termbox.SetCell(params.posX, params.posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{params.posX, params.posY - 1}
 	case "down":
-		termbox.SetCell(posX, posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-		position = PlayerPosition{posX, posY + 1}
-		termbox.SetCell(posX, posY-1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		termbox.SetCell(params.posX, params.posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{params.posX, params.posY + 1}
 	case "left":
-		termbox.SetCell(posX-1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-		position = PlayerPosition{posX - 1, posY}
-		termbox.SetCell(posX+1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		termbox.SetCell(params.posX-1, params.posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{params.posX - 1, params.posY}
 	case "right":
-		termbox.SetCell(posX+1, posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-		position = PlayerPosition{posX + 1, posY}
-		termbox.SetCell(posX-1, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		termbox.SetCell(params.posX+1, params.posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		position = PlayerPosition{params.posX + 1, params.posY}
 	}
 
-	termbox.SetCell(posX, posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+	termbox.SetCell(params.posX, params.posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
-	return runIndex, position
+	return position
 }
 
 func drawBorders() {
