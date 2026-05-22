@@ -110,6 +110,7 @@ func main() {
 					if direction != previousDirection {
 						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
 						ticker.Reset(250 * time.Millisecond)
+						drainChannel(ticker)
 					}
 				case event.Ch == 's' || event.Key == termbox.KeyArrowDown:
 					previousDirection := direction
@@ -117,6 +118,7 @@ func main() {
 					if direction != previousDirection {
 						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
 						ticker.Reset(250 * time.Millisecond)
+						drainChannel(ticker)
 					}
 				case event.Ch == 'a' || event.Key == termbox.KeyArrowLeft:
 					previousDirection := direction
@@ -124,6 +126,7 @@ func main() {
 					if direction != previousDirection {
 						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
 						ticker.Reset(250 * time.Millisecond)
+						drainChannel(ticker)
 					}
 				case event.Ch == 'd' || event.Key == termbox.KeyArrowRight:
 					previousDirection := direction
@@ -131,22 +134,14 @@ func main() {
 					if direction != previousDirection {
 						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
 						ticker.Reset(250 * time.Millisecond)
+						drainChannel(ticker)
 					}
 				case event.Ch == 'q':
 					return
 				}
 			}
 		case <-ticker.C:
-			switch direction {
-			case "up":
-				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
-			case "down":
-				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
-			case "left":
-				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
-			case "right":
-				position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
-			}
+			position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
 		}
 	}
 }
@@ -204,5 +199,16 @@ func drawBorders() {
 	// draw the bottom border
 	for i := 0; i < width; i++ {
 		termbox.SetCell(i, height-1, '#', fg, bg)
+	}
+}
+
+func drainChannel(ticker *time.Ticker) {
+L:
+	for {
+		select {
+		case <-ticker.C:
+		default:
+			break L
+		}
 	}
 }
