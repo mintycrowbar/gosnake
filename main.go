@@ -102,42 +102,24 @@ func main() {
 		select {
 		case event := <-events:
 			if event.Type == termbox.EventKey {
+				var newDir string
 				switch {
 				case event.Ch == 'w' || event.Key == termbox.KeyArrowUp:
-					previousDirection := direction
-					direction = "up"
-
-					if direction != previousDirection {
-						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
-						ticker.Reset(250 * time.Millisecond)
-						drainChannel(ticker)
-					}
+					newDir = "up"
 				case event.Ch == 's' || event.Key == termbox.KeyArrowDown:
-					previousDirection := direction
-					direction = "down"
-					if direction != previousDirection {
-						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
-						ticker.Reset(250 * time.Millisecond)
-						drainChannel(ticker)
-					}
+					newDir = "down"
 				case event.Ch == 'a' || event.Key == termbox.KeyArrowLeft:
-					previousDirection := direction
-					direction = "left"
-					if direction != previousDirection {
-						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
-						ticker.Reset(250 * time.Millisecond)
-						drainChannel(ticker)
-					}
+					newDir = "left"
 				case event.Ch == 'd' || event.Key == termbox.KeyArrowRight:
-					previousDirection := direction
-					direction = "right"
-					if direction != previousDirection {
-						position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
-						ticker.Reset(250 * time.Millisecond)
-						drainChannel(ticker)
-					}
+					newDir = "right"
 				case event.Ch == 'q':
 					return
+				}
+
+				if newDir != "" {
+					previousDirection := direction
+					direction = newDir
+					position = moveBasedOnInput(direction, previousDirection, position, ticker)
 				}
 			}
 		case <-ticker.C:
@@ -211,4 +193,13 @@ L:
 			break L
 		}
 	}
+}
+
+func moveBasedOnInput(direction string, previousDirection string, position PlayerPosition, ticker *time.Ticker) (newPosition PlayerPosition) {
+	if direction != previousDirection {
+		position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+		drainChannel(ticker)
+		ticker.Reset(250 * time.Millisecond)
+	}
+	return position
 }
