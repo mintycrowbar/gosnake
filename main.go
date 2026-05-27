@@ -19,6 +19,7 @@ type moveParams struct {
 	posY              int
 	direction         string
 	previousDirection string
+	snakeLength       int
 }
 
 type Logger struct {
@@ -78,13 +79,11 @@ func main() {
 
 	width, height := termbox.Size()
 	drawBorders()
-	termbox.SetCell(width/2, height/2, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
-
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
 
-	position := PlayerPosition{width / 2, height / 2}
+	position := PlayerPosition{width/2 - 1, height / 2}
 
 	events := make(chan termbox.Event, 20)
 	go func() {
@@ -94,9 +93,11 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(250 * time.Millisecond)
+	var gameSpeed = 250 * time.Millisecond
+	ticker := time.NewTicker(gameSpeed)
 	defer ticker.Stop()
 
+	snakeLength := 3
 	direction := "right"
 	for {
 		select {
@@ -119,11 +120,11 @@ func main() {
 				if newDir != "" {
 					previousDirection := direction
 					direction = newDir
-					position = moveBasedOnInput(direction, previousDirection, position, ticker)
+					position = changeDirection(direction, previousDirection, position, ticker, gameSpeed)
 				}
 			}
 		case <-ticker.C:
-			position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction})
+			position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction, snakeLength: snakeLength})
 		}
 	}
 }
@@ -131,22 +132,38 @@ func main() {
 func movePlayer(params moveParams) PlayerPosition {
 	position := PlayerPosition{}
 
+	// TODO – handle turns: when the player turns, compare the amount of cells before and after the angle, meaning when the head reaches n tiles ahead, remove that n tiles from the tail
+	// TODO – keep track of where the tail is and count the number of cells between the tail and the head, for example N. Then, every time the movePlayer function is called, compare
 	switch params.direction {
 	case "up":
-		termbox.SetCell(params.posX, params.posY-1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		// clear the tail cell
+		if termbox.GetCell(params.posX, params.posY+params.snakeLength-1).Ch == 'O' {
+			termbox.SetCell(params.posX, params.posY+params.snakeLength-1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		}
+		//if termbox.GetCell(params.posX, params.posY-params.snakeLength-2).Ch == ' ' && termbox.GetCell(params.posX-1, params.pos-params.snakeLength-1)
+		// draw the head a cell one cell ahead of where it currently is
+		termbox.SetCell(params.posX, params.posY-1, 'O', termbox.ColorBlack, termbox.ColorDefault)
 		position = PlayerPosition{params.posX, params.posY - 1}
 	case "down":
-		termbox.SetCell(params.posX, params.posY+1, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		if termbox.GetCell(params.posX, params.posY-params.snakeLength+1).Ch == 'O' {
+			termbox.SetCell(params.posX, params.posY-params.snakeLength+1, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		}
+		termbox.SetCell(params.posX, params.posY+1, 'O', termbox.ColorBlack, termbox.ColorDefault)
 		position = PlayerPosition{params.posX, params.posY + 1}
 	case "left":
-		termbox.SetCell(params.posX-1, params.posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		if termbox.GetCell(params.posX+params.snakeLength-1, params.posY).Ch == 'O' {
+			termbox.SetCell(params.posX+params.snakeLength-1, params.posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		}
+		termbox.SetCell(params.posX-1, params.posY, 'O', termbox.ColorBlack, termbox.ColorDefault)
 		position = PlayerPosition{params.posX - 1, params.posY}
 	case "right":
-		termbox.SetCell(params.posX+1, params.posY, 'ඞ', termbox.ColorBlack, termbox.ColorDefault)
+		if termbox.GetCell(params.posX-params.snakeLength+1, params.posY).Ch == 'O' {
+			termbox.SetCell(params.posX-params.snakeLength+1, params.posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		}
+		termbox.SetCell(params.posX+1, params.posY, 'O', termbox.ColorBlack, termbox.ColorDefault)
 		position = PlayerPosition{params.posX + 1, params.posY}
 	}
 
-	termbox.SetCell(params.posX, params.posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
@@ -195,11 +212,11 @@ L:
 	}
 }
 
-func moveBasedOnInput(direction string, previousDirection string, position PlayerPosition, ticker *time.Ticker) (newPosition PlayerPosition) {
+func changeDirection(direction string, previousDirection string, position PlayerPosition, ticker *time.Ticker, gameSpeed time.Duration) (newPosition PlayerPosition) {
 	if direction != previousDirection {
-		position = movePlayer(moveParams{position.posX, position.posY, direction, previousDirection})
+		position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction, previousDirection: previousDirection})
 		drainChannel(ticker)
-		ticker.Reset(250 * time.Millisecond)
+		ticker.Reset(gameSpeed)
 	}
 	return position
 }
