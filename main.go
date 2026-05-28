@@ -24,11 +24,19 @@ const (
 )
 
 type moveParams struct {
-	posX              int
-	posY              int
-	direction         Direction
+	posX        int
+	posY        int
+	direction   Direction
+	snakeLength int
+}
+
+type changeDirParams struct {
+	moveParams
 	previousDirection Direction
-	snakeLength       int
+}
+
+type Queue struct {
+	snakeBody []PlayerPosition
 }
 
 type Logger struct {
@@ -92,8 +100,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	position := PlayerPosition{width/2 - 1, height / 2}
-
 	events := make(chan termbox.Event, 20)
 	go func() {
 		for {
@@ -106,6 +112,8 @@ func main() {
 	ticker := time.NewTicker(gameSpeed)
 	defer ticker.Stop()
 
+	snake := &Queue{}
+	snake.Push(PlayerPosition{width/2 - 1, height / 2})
 	snakeLength := 3
 	direction := DirRight
 	for {
@@ -132,45 +140,58 @@ func main() {
 				if validKey {
 					previousDirection := direction
 					direction = newDir
-					position = changeDirection(direction, previousDirection, position, ticker, gameSpeed)
+
+					snake = changeDirection(changeDirParams{
+						moveParams: moveParams{
+							posX:        snake.GetHead().posX,
+							posY:        snake.GetHead().posY,
+							direction:   direction,
+							snakeLength: snakeLength,
+						},
+						previousDirection: previousDirection,
+					}, snake, ticker, gameSpeed)
 				}
 			}
 		case <-ticker.C:
-			position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction, snakeLength: snakeLength})
+			snake, snakeLength = movePlayer(moveParams{
+				posX:        snake.GetHead().posX,
+				posY:        snake.GetHead().posY,
+				direction:   direction,
+				snakeLength: snakeLength,
+			}, snake)
 		}
 	}
 }
 
-func movePlayer(params moveParams) PlayerPosition {
+func movePlayer(params moveParams, moveQueue *Queue) (*Queue, int) {
 	// dx and dy represent the head movement
-	// tx and ty represent where the tail was relative to the head
-	var dx, dy, tx, ty int
+	var dx, dy int
 
 	switch params.direction {
 	case DirUp:
-		dy, ty = -1, params.snakeLength-1
+		dy = -1
 	case DirDown:
-		dy, ty = 1, -params.snakeLength+1
+		dy = 1
 	case DirLeft:
-		dx, tx = -1, params.snakeLength-1
+		dx = -1
 	case DirRight:
-		dx, tx = 1, -params.snakeLength+1
-	}
-
-	// remove the previous tail location
-	tailX, tailY := params.posX+tx, params.posY+ty
-	if termbox.GetCell(tailX, tailY).Ch == 'O' {
-		termbox.SetCell(tailX, tailY, ' ', termbox.ColorBlack, termbox.ColorDefault)
+		dx = 1
 	}
 
 	// set new head location
-	head := PlayerPosition{params.posX + dx, params.posY + dy}
-	termbox.SetCell(head.posX, head.posY, 'O', termbox.ColorBlack, termbox.ColorDefault)
+	newPos := PlayerPosition{params.posX + dx, params.posY + dy}
+	moveQueue.Push(newPos)
+	termbox.SetCell(newPos.posX, newPos.posY, 'O', termbox.ColorBlack, termbox.ColorDefault)
+
+	if len(moveQueue.snakeBody) > params.snakeLength+1 {
+		moveQueue.Pop()
+	}
+	termbox.SetCell(moveQueue.snakeBody[0].posX, moveQueue.snakeBody[0].posY, ' ', termbox.ColorBlack, termbox.ColorDefault)
 
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
-	return head
+	return moveQueue, params.snakeLength
 }
 
 func drawBorders() {
@@ -215,11 +236,31 @@ L:
 	}
 }
 
-func changeDirection(direction Direction, previousDirection Direction, position PlayerPosition, ticker *time.Ticker, gameSpeed time.Duration) (newPosition PlayerPosition) {
-	if direction != previousDirection {
-		position = movePlayer(moveParams{posX: position.posX, posY: position.posY, direction: direction, previousDirection: previousDirection})
+func changeDirection(params changeDirParams, moveQueue *Queue, ticker *time.Ticker, gameSpeed time.Duration) *Queue {
+	if params.direction != params.previousDirection {
+		moveQueue, _ = movePlayer(moveParams{params.posX, params.posY, params.direction, params.snakeLength}, moveQueue)
 		drainChannel(ticker)
 		ticker.Reset(gameSpeed)
 	}
-	return position
+	return moveQueue
+}
+
+// add an element to the end of the original slice
+func (queue *Queue) Push(position PlayerPosition) {
+	queue.snakeBody = append(queue.snakeBody, position)
+}
+
+// remove the first element of the slice
+func (queue *Queue) Pop() {
+	if len(queue.snakeBody) > 0 {
+		queue.snakeBody = queue.snakeBody[1:]
+	}
+}
+
+// get head coords
+func (queue *Queue) GetHead() PlayerPosition {
+	if len(queue.snakeBody) == 0 {
+		return PlayerPosition{}
+	}
+	return queue.snakeBody[len(queue.snakeBody)-1]
 }
