@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -37,6 +38,11 @@ type changeDirParams struct {
 
 type Queue struct {
 	snakeBody []PlayerPosition
+}
+
+type terminalSize struct {
+	width  int
+	height int
 }
 
 type Logger struct {
@@ -95,7 +101,8 @@ func main() {
 	defer termbox.Close()
 
 	width, height := termbox.Size()
-	drawBorders()
+	termSize := terminalSize{width, height}
+
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
@@ -108,14 +115,27 @@ func main() {
 		}
 	}()
 
+	runGame(events, termSize)
+}
+
+func runGame(events <-chan termbox.Event, termSize terminalSize) {
+	drawBorders()
+	makeScoreLabel(termSize)
+
 	var gameSpeed = 250 * time.Millisecond
 	ticker := time.NewTicker(gameSpeed)
 	defer ticker.Stop()
 
 	snake := &Queue{}
-	snake.Push(PlayerPosition{width/2 - 1, height / 2})
+	snake.Push(PlayerPosition{termSize.width/2 - 1, termSize.height / 2})
+
 	snakeLength := 3
 	direction := DirRight
+	gameOver := false
+
+	drawPointRandom(termSize)
+
+GameLoop:
 	for {
 		select {
 		case event := <-events:
@@ -132,7 +152,8 @@ func main() {
 				case event.Ch == 'd' || event.Key == termbox.KeyArrowRight:
 					newDir = DirRight
 				case event.Ch == 'q':
-					return
+					termbox.Close()
+					os.Exit(1)
 				default:
 					validKey = false
 				}
@@ -141,7 +162,7 @@ func main() {
 					previousDirection := direction
 					direction = newDir
 
-					snake = changeDirection(changeDirParams{
+					snake, gameOver = changeDirection(changeDirParams{
 						moveParams: moveParams{
 							posX:        snake.GetHead().posX,
 							posY:        snake.GetHead().posY,
@@ -149,21 +170,30 @@ func main() {
 							snakeLength: snakeLength,
 						},
 						previousDirection: previousDirection,
-					}, snake, ticker, gameSpeed)
+					}, termSize, snake, ticker, gameSpeed)
+
+					if gameOver == true {
+						break GameLoop
+					}
 				}
 			}
 		case <-ticker.C:
-			snake, snakeLength = movePlayer(moveParams{
+			snake, snakeLength, gameOver = movePlayer(moveParams{
 				posX:        snake.GetHead().posX,
 				posY:        snake.GetHead().posY,
 				direction:   direction,
 				snakeLength: snakeLength,
-			}, snake)
+			}, snake, termSize)
+
+			if gameOver == true {
+				break GameLoop
+			}
 		}
 	}
+	drawGameOver(events, termSize)
 }
 
-func movePlayer(params moveParams, moveQueue *Queue) (*Queue, int) {
+func movePlayer(params moveParams, moveQueue *Queue, termSize terminalSize) (*Queue, int, bool) {
 	// dx and dy represent the head movement
 	var dx, dy int
 
@@ -181,6 +211,20 @@ func movePlayer(params moveParams, moveQueue *Queue) (*Queue, int) {
 	// set new head location
 	newPos := PlayerPosition{params.posX + dx, params.posY + dy}
 	moveQueue.Push(newPos)
+
+	// check if the next cell is a point or the walls or snake body
+	if termbox.GetCell(newPos.posX, newPos.posY).Fg == termbox.ColorCyan {
+		params.snakeLength++
+		drawPointRandom(termSize)
+
+		score := termbox.GetCell(8, termSize.height-1).Ch
+		digit := int(score)
+		digit++
+		termbox.SetCell(8, termSize.height-1, rune(digit), termbox.ColorLightGray, termbox.ColorBlack)
+	} else if termbox.GetCell(newPos.posX, newPos.posY).Ch == '#' || termbox.GetCell(newPos.posX, newPos.posY).Ch == 'O' {
+		return moveQueue, params.snakeLength, true
+	}
+
 	termbox.SetCell(newPos.posX, newPos.posY, 'O', termbox.ColorBlack, termbox.ColorDefault)
 
 	if len(moveQueue.snakeBody) > params.snakeLength+1 {
@@ -191,7 +235,8 @@ func movePlayer(params moveParams, moveQueue *Queue) (*Queue, int) {
 	if err := termbox.Flush(); err != nil {
 		log.Fatal(err)
 	}
-	return moveQueue, params.snakeLength
+
+	return moveQueue, params.snakeLength, false
 }
 
 func drawBorders() {
@@ -236,13 +281,14 @@ L:
 	}
 }
 
-func changeDirection(params changeDirParams, moveQueue *Queue, ticker *time.Ticker, gameSpeed time.Duration) *Queue {
+func changeDirection(params changeDirParams, termSize terminalSize, moveQueue *Queue, ticker *time.Ticker, gameSpeed time.Duration) (*Queue, bool) {
+	gameOver := false
 	if params.direction != params.previousDirection {
-		moveQueue, _ = movePlayer(moveParams{params.posX, params.posY, params.direction, params.snakeLength}, moveQueue)
+		moveQueue, _, gameOver = movePlayer(moveParams{params.posX, params.posY, params.direction, params.snakeLength}, moveQueue, termSize)
 		drainChannel(ticker)
 		ticker.Reset(gameSpeed)
 	}
-	return moveQueue
+	return moveQueue, gameOver
 }
 
 // add an element to the end of the original slice
@@ -263,4 +309,58 @@ func (queue *Queue) GetHead() PlayerPosition {
 		return PlayerPosition{}
 	}
 	return queue.snakeBody[len(queue.snakeBody)-1]
+}
+
+func drawPointRandom(termSize terminalSize) {
+	randomX := rand.Intn((termSize.width-3)-3+1) + 3
+	randomY := rand.Intn((termSize.height-3)-3+1) + 3
+
+	for termbox.GetCell(randomX, randomY).Ch != ' ' {
+		randomX = rand.Intn((termSize.width-3)-3+1) + 3
+		randomY = rand.Intn((termSize.height-3)-3+1) + 3
+	}
+
+	termbox.SetCell(randomX, randomY, 'P', termbox.ColorCyan, termbox.ColorDefault)
+}
+
+func makeScoreLabel(termSize terminalSize) {
+	chars := []rune{'s', 'c', 'o', 'r', 'e', ':', ' ', '0'}
+	for i := 0; i < len(chars); i++ {
+		termbox.SetCell(i+1, termSize.height-1, chars[i], termbox.ColorLightGray, termbox.ColorBlack)
+	}
+}
+
+func drawGameOver(events <-chan termbox.Event, termSize terminalSize) {
+	topMsg := "GAME OVER"
+	bottomMsg := "Press R to restart or Q to quit"
+
+	clearErr := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	if clearErr != nil {
+		log.Fatal(clearErr)
+	}
+
+	x := termSize.width / 2
+	y := termSize.height / 2
+
+	for i, ch := range topMsg {
+		termbox.SetCell(-len(topMsg)/2+x+i, y-2, ch, termbox.ColorLightRed, termbox.ColorDefault)
+	}
+
+	for i, ch := range bottomMsg {
+		termbox.SetCell(-len(bottomMsg)/2+x+i, y, ch, termbox.ColorWhite, termbox.ColorDefault)
+	}
+
+	flushErr := termbox.Flush()
+	if flushErr != nil {
+		log.Fatal(flushErr)
+	}
+
+	choice := termbox.PollEvent()
+
+	switch choice.Ch {
+	case 'q':
+		return
+	case 'r':
+		runGame(events, termSize)
+	}
 }
