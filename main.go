@@ -333,24 +333,6 @@ func makeScoreLabel(termSize terminalSize) {
 	}
 }
 
-/*func updateScoreLabel(counter *Counter, termSize terminalSize) {
-	score := strconv.Itoa(counter.score)
-	firstDigit := score[0:1]
-	middleDigit := score[1:2]
-	lastDigit := string(score[len(score)-1])
-
-	if counter.score <= 9 {
-		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
-	} else if counter.score >= 11 && counter.score <= 99 {
-		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
-		termbox.SetCell(9, termSize.height-1, rune(middleDigit[1]), termbox.ColorLightGray, termbox.ColorBlack)
-	} else if counter.score >= 100 {
-		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
-		termbox.SetCell(9, termSize.height-1, rune(middleDigit[1]), termbox.ColorLightGray, termbox.ColorBlack)
-		termbox.SetCell(9, termSize.height-1, rune(lastDigit[2]), termbox.ColorLightGray, termbox.ColorBlack)
-	}
-}*/
-
 func updateScoreLabel(counter *Counter, termSize terminalSize) {
 	score := strconv.Itoa(counter.score)
 
