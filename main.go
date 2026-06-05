@@ -344,7 +344,7 @@ func updateScoreLabel(counter *Counter, termSize terminalSize) {
 	} else if counter.score >= 100 {
 		termbox.SetCell(8, termSize.height-1, rune(score[0]), termbox.ColorLightGray, termbox.ColorBlack)
 		termbox.SetCell(9, termSize.height-1, rune(score[1]), termbox.ColorLightGray, termbox.ColorBlack)
-		termbox.SetCell(9, termSize.height-1, rune(score[2]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(10, termSize.height-1, rune(score[2]), termbox.ColorLightGray, termbox.ColorBlack)
 	}
 }
 
