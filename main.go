@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/nsf/termbox-go"
@@ -38,6 +39,10 @@ type changeDirParams struct {
 
 type Queue struct {
 	snakeBody []PlayerPosition
+}
+
+type Counter struct {
+	score int
 }
 
 type terminalSize struct {
@@ -131,6 +136,7 @@ func runGame(events <-chan termbox.Event, termSize terminalSize) {
 
 	snakeLength := 3
 	direction := DirRight
+	counter := &Counter{8}
 	gameOver := false
 
 	drawPointRandom(termSize)
@@ -170,7 +176,7 @@ GameLoop:
 							snakeLength: snakeLength,
 						},
 						previousDirection: previousDirection,
-					}, termSize, snake, ticker, gameSpeed)
+					}, termSize, snake, counter, ticker, gameSpeed)
 
 					if gameOver == true {
 						break GameLoop
@@ -183,7 +189,7 @@ GameLoop:
 				posY:        snake.GetHead().posY,
 				direction:   direction,
 				snakeLength: snakeLength,
-			}, snake, termSize)
+			}, snake, counter, termSize)
 
 			if gameOver == true {
 				break GameLoop
@@ -193,7 +199,7 @@ GameLoop:
 	drawGameOver(events, termSize)
 }
 
-func movePlayer(params moveParams, moveQueue *Queue, termSize terminalSize) (*Queue, int, bool) {
+func movePlayer(params moveParams, moveQueue *Queue, counter *Counter, termSize terminalSize) (*Queue, int, bool) {
 	// dx and dy represent the head movement
 	var dx, dy int
 
@@ -216,11 +222,8 @@ func movePlayer(params moveParams, moveQueue *Queue, termSize terminalSize) (*Qu
 	if termbox.GetCell(newPos.posX, newPos.posY).Fg == termbox.ColorCyan {
 		params.snakeLength++
 		drawPointRandom(termSize)
-
-		score := termbox.GetCell(8, termSize.height-1).Ch
-		digit := int(score)
-		digit++
-		termbox.SetCell(8, termSize.height-1, rune(digit), termbox.ColorLightGray, termbox.ColorBlack)
+		counter.Increment()
+		updateScoreLabel(counter, termSize)
 	} else if termbox.GetCell(newPos.posX, newPos.posY).Ch == '#' || termbox.GetCell(newPos.posX, newPos.posY).Ch == 'O' {
 		return moveQueue, params.snakeLength, true
 	}
@@ -281,10 +284,10 @@ L:
 	}
 }
 
-func changeDirection(params changeDirParams, termSize terminalSize, moveQueue *Queue, ticker *time.Ticker, gameSpeed time.Duration) (*Queue, bool) {
+func changeDirection(params changeDirParams, termSize terminalSize, moveQueue *Queue, counter *Counter, ticker *time.Ticker, gameSpeed time.Duration) (*Queue, bool) {
 	gameOver := false
 	if params.direction != params.previousDirection {
-		moveQueue, _, gameOver = movePlayer(moveParams{params.posX, params.posY, params.direction, params.snakeLength}, moveQueue, termSize)
+		moveQueue, _, gameOver = movePlayer(moveParams{params.posX, params.posY, params.direction, params.snakeLength}, moveQueue, counter, termSize)
 		drainChannel(ticker)
 		ticker.Reset(gameSpeed)
 	}
@@ -328,6 +331,43 @@ func makeScoreLabel(termSize terminalSize) {
 	for i := 0; i < len(chars); i++ {
 		termbox.SetCell(i+1, termSize.height-1, chars[i], termbox.ColorLightGray, termbox.ColorBlack)
 	}
+}
+
+/*func updateScoreLabel(counter *Counter, termSize terminalSize) {
+	score := strconv.Itoa(counter.score)
+	firstDigit := score[0:1]
+	middleDigit := score[1:2]
+	lastDigit := string(score[len(score)-1])
+
+	if counter.score <= 9 {
+		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
+	} else if counter.score >= 11 && counter.score <= 99 {
+		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(middleDigit[1]), termbox.ColorLightGray, termbox.ColorBlack)
+	} else if counter.score >= 100 {
+		termbox.SetCell(8, termSize.height-1, rune(firstDigit[0]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(middleDigit[1]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(lastDigit[2]), termbox.ColorLightGray, termbox.ColorBlack)
+	}
+}*/
+
+func updateScoreLabel(counter *Counter, termSize terminalSize) {
+	score := strconv.Itoa(counter.score)
+
+	if counter.score <= 9 {
+		termbox.SetCell(8, termSize.height-1, rune(score[0]), termbox.ColorLightGray, termbox.ColorBlack)
+	} else if counter.score >= 10 && counter.score <= 99 {
+		termbox.SetCell(8, termSize.height-1, rune(score[0]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(score[1]), termbox.ColorLightGray, termbox.ColorBlack)
+	} else if counter.score >= 100 {
+		termbox.SetCell(8, termSize.height-1, rune(score[0]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(score[1]), termbox.ColorLightGray, termbox.ColorBlack)
+		termbox.SetCell(9, termSize.height-1, rune(score[2]), termbox.ColorLightGray, termbox.ColorBlack)
+	}
+}
+
+func (counter *Counter) Increment() {
+	counter.score++
 }
 
 func drawGameOver(events <-chan termbox.Event, termSize terminalSize) {
