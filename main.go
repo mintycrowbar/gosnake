@@ -136,7 +136,7 @@ func runGame(events <-chan termbox.Event, termSize terminalSize) {
 
 	snakeLength := 3
 	direction := DirRight
-	counter := &Counter{8}
+	counter := &Counter{0}
 	gameOver := false
 
 	drawPointRandom(termSize)
